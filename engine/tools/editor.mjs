@@ -1,5 +1,6 @@
 // المحرّر: صفحة محلية فيها المقطع وتايم لاين، والتعديل فيها ينحفظ بملفات مجلد الشغل مباشرة.
 //   node tools/editor.mjs <مجلد الشغل> [--port 4173] [--no-open]
+// بدون --port يبدأ من 4173 وياخذ أول منفذ فاضي.
 // يشتغل على الجهاز نفسه وما يطلع منه شي للنت.
 import fs from 'node:fs';
 import os from 'node:os';
@@ -222,15 +223,23 @@ const server = http.createServer(async (req, res) => {
   }
 });
 
+// المنفذ مشغول (محرّر مقطع ثاني شغّال مثلاً)؟ ناخذ اللي بعده، إلا إذا المنفذ محدد بـ --port
+let port = PORT;
 server.on('error', (e) => {
-  console.error(e.code === 'EADDRINUSE' ? `❌ المنفذ ${PORT} مشغول. جرّب: --port ${PORT + 1}` : '❌ ' + e.message);
+  if (e.code === 'EADDRINUSE' && !args.includes('--port') && port < PORT + 20) {
+    port++;
+    server.listen(port, '127.0.0.1');
+    return;
+  }
+  console.error(e.code === 'EADDRINUSE' ? `❌ المنفذ ${port} مشغول. جرّب: --port ${port + 1}` : '❌ ' + e.message);
   process.exit(1);
 });
-server.listen(PORT, '127.0.0.1', () => {
-  const link = `http://localhost:${PORT}`;
+server.on('listening', () => {
+  const link = `http://localhost:${port}`;
   console.log(`✅ المحرّر شغّال: ${link}\nسكّره بـ Ctrl+C لما تخلص.`);
   if (!args.includes('--no-open')) {
     if (process.platform === 'win32') spawn('cmd', ['/c', 'start', '', link], {detached: true, stdio: 'ignore'}).unref();
     else spawn(process.platform === 'darwin' ? 'open' : 'xdg-open', [link], {detached: true, stdio: 'ignore'}).unref();
   }
 });
+server.listen(port, '127.0.0.1');
