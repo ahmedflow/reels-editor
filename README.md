@@ -4,16 +4,25 @@
 
 ## التنصيب
 
-نزّل المستودع داخل مجلد المهارات:
+افتح Claude واكتب له:
 
-```bash
-git clone https://github.com/ahmedflow/reels-editor.git
+```
+نصّب لي هالمهارة https://github.com/ahmedflow/reels-editor
 ```
 
-مجلد المهارات:
+أو نزّلها بنفسك من الطرفية داخل مجلد المهارات.
 
-- ويندوز: `C:\Users\<اسمك>\.claude\skills\`
-- ماك: `~/.claude/skills/`
+ويندوز (PowerShell):
+
+```powershell
+git clone https://github.com/ahmedflow/reels-editor "$env:USERPROFILE\.claude\skills\reels-editor"
+```
+
+ماك:
+
+```bash
+git clone https://github.com/ahmedflow/reels-editor ~/.claude/skills/reels-editor
+```
 
 أول مرة تستخدمها، المهارة تنزّل أدواتها بنفسها بعد ما تستأذنك (قرابة 2 قيقا).
 
