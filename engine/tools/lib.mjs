@@ -94,3 +94,10 @@ export function readWav(file) {
 }
 
 export const r3 = (x) => Math.round(x * 1000) / 1000;
+
+// الرسمات المكتوبة خصوصي لهالفيديو تنسخ لداخل المحرّك عشان تنبني معه
+export function syncCustom(work) {
+  const src = path.join(work, 'custom.jsx');
+  const head = '// ينكتب تلقائياً من <مجلد الشغل>/custom.jsx قبل كل رندر — لا تعدّله هنا\n';
+  fs.writeFileSync(path.join(ENGINE, 'src', 'custom.generated.jsx'), head + (fs.existsSync(src) ? fs.readFileSync(src, 'utf8') : 'export const scenes = {};\n'), 'utf8');
+}

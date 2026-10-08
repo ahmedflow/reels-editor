@@ -1,9 +1,13 @@
 import React from 'react';
 import {rgba, clamp, ease, enter, Box} from './kit.jsx';
 import {scenes as CUSTOM} from './custom.generated.jsx';
+import {SPLIT_H, layoutOf} from './plan.js';
 
-// مساحة المشهد: نص الشاشة تقريباً. وقت المشهد الفيديو يتغبّش وراه، فالمساحة كلها له
+// مساحة الرسمة المالية للشاشة: نص الشاشة تقريباً. الفيديو يتغبّش وراها، فالمساحة كلها لها
 export const CANVAS = {x: 70, y: 300, w: 940, h: 960};
+// ومساحتها لما الشاشة مقسومة: تحت المتحدث، وفوق أزرار التطبيقات
+export const CANVAS_SPLIT = {x: 70, y: SPLIT_H + 50, w: 940, h: 600};
+export const canvasOf = (scene) => (layoutOf(scene) === 'split' ? CANVAS_SPLIT : CANVAS);
 // القوالب الجاهزة مرسومة على لوحة 940×400 وتتكبّر عشان تملى المساحة
 const PANEL = {w: 940, h: 400};
 const BUILTIN_SCALE = 1.0;
@@ -86,8 +90,11 @@ function Numbers({scene, t, th}) {
 function List({scene, t, th}) {
   const items = (scene.items || []).slice(0, 4);
   const rowH = Math.min(92, (PANEL.h - (scene.title ? 80 : 0)) / Math.max(1, items.length) - 12);
+  // القائمة القصيرة تتكبّر لين تملى مساحتها، بحد أطول سطر فيها
+  const longest = Math.max(4, String(scene.title || '').length, ...items.map((it) => String(it.text || '').length + 3));
+  const z = Math.max(1, Math.min(1.5, 540 / ((scene.title ? 90 : 0) + items.length * (rowH + 12)), 860 / (longest * 27)));
   return (
-    <div style={{position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', direction: 'rtl', justifyContent: 'center', gap: 12, padding: '0 40px'}}>
+    <div style={{position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', direction: 'rtl', justifyContent: 'center', gap: 12, padding: '0 40px', transform: `scale(${z.toFixed(3)})`, transformOrigin: 'right center'}}>
       {scene.title ? <div style={{fontSize: 50, fontWeight: 800, color: th.acc, marginBottom: 8, ...enter(t, scene.s + 0.4)}}>{scene.title}</div> : null}
       {items.map((it, i) => (
         <div key={i} style={{display: 'flex', alignItems: 'center', gap: 22, height: rowH, ...enter(t, it.at)}}>
@@ -122,15 +129,17 @@ function Word({scene, t, th}) {
 
 const TYPES = {flow: Flow, numbers: Numbers, list: List, word: Word};
 
-export function ScenePanel({scene, t, th}) {
+// shiftY: وقت القسمة الرسمة تطلع وتنزل مع الخط الفاصل، فما تركب على صورة المتحدث
+export function ScenePanel({scene, t, th, shiftY = 0}) {
   const k = Math.min(ease((t - scene.s - 0.12) / 0.25), 1 - clamp((t - (scene.e - 0.25)) / 0.25));
-  const base = {position: 'absolute', left: CANVAS.x, top: CANVAS.y, width: CANVAS.w, height: CANVAS.h, opacity: k};
+  const cv = canvasOf(scene);
+  const base = {position: 'absolute', left: cv.x, top: cv.y + shiftY, width: cv.w, height: cv.h, opacity: k};
   if (scene.type === 'custom') {
     const C = CUSTOM[scene.name];
     if (!C) return <div style={{...base, color: '#ff5555', fontSize: 50, fontWeight: 700, direction: 'rtl'}}>الرسمة مو موجودة بـcustom.jsx: {String(scene.name)}</div>;
     return (
       <div style={base}>
-        <C t={t} local={t - scene.s} scene={scene} th={th} W={CANVAS.w} H={CANVAS.h} />
+        <C t={t} local={t - scene.s} scene={scene} th={th} W={cv.w} H={cv.h} layout={layoutOf(scene)} />
       </div>
     );
   }

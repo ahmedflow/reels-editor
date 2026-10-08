@@ -30,7 +30,7 @@ ok.push(`Node ${process.versions.node}`);
 
 // 2) حزم المحرّك (ريموشن + التفريغ + رصد الوجه)
 const depsWork = () => {
-  const r = run(process.execPath, ['-e', "Promise.all(['@remotion/bundler','@remotion/renderer','@remotion/install-whisper-cpp','onnxruntime-node'].map(m=>import(m))).then(()=>console.log('DEPS_OK')).catch(e=>{console.error(e.message);process.exit(1)})"], {shell: false});
+  const r = run(process.execPath, ['-e', "Promise.all(['@remotion/bundler','@remotion/renderer','@remotion/player','@remotion/install-whisper-cpp','onnxruntime-node','esbuild'].map(m=>import(m))).then(()=>console.log('DEPS_OK')).catch(e=>{console.error(e.message);process.exit(1)})"], {shell: false});
   return r.status === 0 && r.stdout.includes('DEPS_OK');
 };
 let deps = fs.existsSync(path.join(ENGINE, 'node_modules')) && depsWork();

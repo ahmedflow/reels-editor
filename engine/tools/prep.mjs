@@ -1,8 +1,9 @@
 // التجهيز كله بأمر واحد:  node tools/prep.mjs <الفيديو> <مجلد الشغل> [--model medium] [--keep-silence]
 // يطلّع داخل مجلد الشغل: source.* · meta.json · cut.json · face.json · captions.json · script.txt
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
-import {ff, probe, readWav, readJson, writeJson, r3, ENGINE, WHISPER_DIR, WHISPER_VERSION} from './lib.mjs';
+import {ff, probe, readWav, readJson, writeJson, r3, ENGINE, CACHE, WHISPER_DIR, WHISPER_VERSION} from './lib.mjs';
 
 const args = process.argv.slice(2);
 const flag = (n, d) => (args.includes(n) ? args[args.indexOf(n) + 1] : d);
@@ -171,8 +172,19 @@ const {installWhisperCpp, downloadWhisperModel, transcribe} = await import('@rem
 await installWhisperCpp({to: WHISPER_DIR, version: WHISPER_VERSION, printOutput: false});
 await downloadWhisperModel({folder: WHISPER_DIR, model: MODEL, printOutput: false});
 console.log('أكتب الكلام…');
+// برنامج التفريغ على ويندوز ما يفتح مسار فيه حروف عربية، فننسخ الصوت مؤقتاً لمسار حروفه إنجليزية
+const ascii = (x) => /^[\x20-\x7E]*$/.test(x);
+let wavIn = wav;
+if (!ascii(wav)) {
+  const dir = [os.tmpdir(), CACHE].find(ascii);
+  if (dir) {
+    fs.mkdirSync(dir, {recursive: true});
+    wavIn = path.join(dir, `reels-editor-${process.pid}.wav`);
+    fs.copyFileSync(wav, wavIn);
+  }
+}
 const {transcription} = await transcribe({
-  inputPath: wav,
+  inputPath: wavIn,
   whisperPath: WHISPER_DIR,
   whisperCppVersion: WHISPER_VERSION,
   model: MODEL,
@@ -185,6 +197,10 @@ const {transcription} = await transcribe({
     ['--split-on-word', 'true'],
   ],
 });
+if (wavIn !== wav) {
+  fs.rmSync(wavIn, {force: true});
+  fs.rmSync(wavIn.replace(/\.wav$/, '.json'), {force: true});
+}
 writeJson(path.join(WORK, 'whisper.json'), transcription);
 
 // كلمات بتوقيت المصدر

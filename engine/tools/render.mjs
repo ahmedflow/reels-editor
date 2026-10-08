@@ -3,7 +3,9 @@
 //   node tools/render.mjs <مجلد الشغل> final               ← reel.mp4 + reel.srt + reel.txt
 import fs from 'node:fs';
 import path from 'node:path';
-import {ff, readJson, ENGINE} from './lib.mjs';
+import {ff, readJson, syncCustom, ENGINE} from './lib.mjs';
+import {writeSfx} from './sfx.mjs';
+import {validatePlan} from '../src/plan.js';
 
 const WORK = path.resolve(process.argv[2] || '.');
 const MODE = process.argv[3] || 'final';
@@ -16,26 +18,19 @@ const caps = readJson(path.join(WORK, 'captions.json'));
 const plan = readJson(path.join(WORK, 'plan.json'), {});
 const inputProps = {meta, cut, face, sentences: caps.sentences, plan};
 
-// فحص الخطة قبل الرندر — غلط بالتوقيت أرخص نكتشفه هنا
-const problems = [];
-for (const [i, sc] of (plan.scenes || []).entries()) {
-  if (!['flow', 'numbers', 'list', 'word', 'custom'].includes(sc.type)) problems.push(`الرسمة ${i + 1}: نوع مو معروف "${sc.type}"`);
-  if (sc.type === 'custom' && !sc.name) problems.push(`الرسمة ${i + 1}: نوعها custom وناقصها name`);
-  if (sc.e - sc.s > 6) problems.push(`الرسمة ${i + 1}: أطول من 6 ثواني والمتحدث محجوب طولها، فقصّرها أو اقسمها`);
-  if (!(sc.e > sc.s)) problems.push(`الرسمة ${i + 1}: النهاية لازم تكون بعد البداية`);
-  if (sc.e - sc.s < 2) problems.push(`الرسمة ${i + 1}: أقصر من ثانيتين وما تلحق تنقرا`);
-  if (sc.s < 0 || sc.e > cut.total + 0.05) problems.push(`الرسمة ${i + 1}: برّا مدة الفيديو (${cut.total} ث)`);
-}
-if (problems.length) {
+// فحص الخطة قبل الرندر — غلط بالتوقيت أرخص نكتشفه هنا. --force للمحرّر: صاحب المقطع شاف التنبيهات وقرر
+const problems = validatePlan(plan, cut.total);
+if (problems.length && !process.argv.includes('--force')) {
   console.error('❌ plan.json فيه مشاكل:\n' + problems.join('\n'));
   process.exit(4);
 }
+if (plan.music?.file && !fs.existsSync(path.join(WORK, plan.music.file))) {
+  console.error('❌ ملف الموسيقى مو موجود بمجلد الشغل: ' + plan.music.file);
+  process.exit(4);
+}
 
-// المشاهد المكتوبة خصوصي لهالفيديو تنسخ لداخل المحرّك عشان تنبني معه
-const customSrc = path.join(WORK, 'custom.jsx');
-const customDst = path.join(ENGINE, 'src', 'custom.generated.jsx');
-const customHead = '// ينكتب تلقائياً من <مجلد الشغل>/custom.jsx قبل كل رندر — لا تعدّله هنا\n';
-fs.writeFileSync(customDst, customHead + (fs.existsSync(customSrc) ? fs.readFileSync(customSrc, 'utf8') : 'export const scenes = {};\n'), 'utf8');
+syncCustom(WORK);
+writeSfx(WORK);
 
 const {bundle} = await import('@remotion/bundler');
 const {renderMedia, renderStill, selectComposition} = await import('@remotion/renderer');
@@ -45,7 +40,7 @@ const composition = await selectComposition({serveUrl, id: 'Reel', inputProps});
 const total = composition.durationInFrames / FPS;
 
 if (MODE === 'preview') {
-  let times = process.argv.slice(4).map(Number).filter((n) => Number.isFinite(n));
+  let times = process.argv.slice(4).filter((x) => !x.startsWith('--')).map(Number).filter((n) => Number.isFinite(n));
   if (!times.length) {
     // ما انحددت ثواني: ناخذ وسط كل رسمة ونكمّل الباقي على طول المقطع
     times = (plan.scenes || []).map((s) => (s.s + s.e) / 2 + 0.3);
@@ -76,7 +71,7 @@ await renderMedia({
   outputLocation: rawFile,
   onProgress: ({progress}) => {
     const pct = Math.floor(progress * 100);
-    if (pct >= lastPct + 10) {
+    if (pct >= lastPct + (process.argv.includes('--fine') ? 2 : 10)) {
       lastPct = pct;
       console.log(`الرندر ${pct}٪`);
     }
