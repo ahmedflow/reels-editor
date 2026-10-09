@@ -126,6 +126,15 @@ export function validatePlan(plan, total) {
   return problems;
 }
 
+// تنبيهات ما تمنع الرندر: المقطع يطلع، بس الخطة تستاهل مراجعة
+export function advisePlan(plan, total) {
+  const notes = [];
+  const n = (plan?.scenes || []).length;
+  const want = Math.max(1, Math.round((total / 30) * 3));
+  if (total >= 12 && n < want) notes.push(`الرسمات ${n} والمقطع ${Math.round(total)} ث: المتوقع ${want} على الأقل. ارجع للكلام ودوّر أي رقم أو تكلفة أو مقارنة أو تعداد ما انرسم.`);
+  return notes;
+}
+
 // ——— الكلام ———
 const r3 = (x) => Math.round(x * 1000) / 1000;
 

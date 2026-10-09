@@ -5,7 +5,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {ff, readJson, syncCustom, ENGINE} from './lib.mjs';
 import {writeSfx} from './sfx.mjs';
-import {validatePlan} from '../src/plan.js';
+import {validatePlan, advisePlan} from '../src/plan.js';
 
 const WORK = path.resolve(process.argv[2] || '.');
 const MODE = process.argv[3] || 'final';
@@ -28,6 +28,8 @@ if (plan.music?.file && !fs.existsSync(path.join(WORK, plan.music.file))) {
   console.error('❌ ملف الموسيقى مو موجود بمجلد الشغل: ' + plan.music.file);
   process.exit(4);
 }
+
+for (const note of advisePlan(plan, cut.total)) console.log('⚠️ ' + note);
 
 syncCustom(WORK);
 writeSfx(WORK);

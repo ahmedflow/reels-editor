@@ -119,7 +119,11 @@ else missing.push('ملف models/face.onnx ناقص من المهارة');
 console.log('الجاهز: ' + ok.join(' · '));
 if (missing.length) {
   console.log('الناقص:\n' + missing.map((m) => '  - ' + m).join('\n'));
-  if (!INSTALL) console.log('للتنزيل: node tools/setup.mjs --install');
+  if (!INSTALL) {
+    console.log('للتنزيل: node tools/setup.mjs --install');
+    // اللي يقرا هالمخرجات مساعد، وهو اللي بيسأل المستخدم. نذكّره كيف يسأل
+    console.log('قبل التنزيل استأذن المستخدم بأداة الخيارات (AskUserQuestion أو اللي يقابلها): سؤال واحد بزرّين «ابدأ التنزيل» و«لا، وقّف». لا تكتب السؤال كنص بالرسالة، ولا تعطيه الأمر ينفّذه بنفسه.');
+  }
   process.exit(10);
 }
 console.log('✅ كل شي جاهز');
