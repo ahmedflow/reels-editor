@@ -4,6 +4,7 @@ import {createRoot} from 'react-dom/client';
 import {Player} from '@remotion/player';
 import {Reel} from '../src/Reel.jsx';
 import {PALETTES, resolveTheme} from '../src/theme.js';
+import {ICONS, ARTS} from '../src/kit.jsx';
 import {STYLES, SFX, H, layoutOf, captionStyle, resolveSounds, validatePlan, applyFix, retimeProject, keepTotal, toSource} from '../src/plan.js';
 
 const FPS = 30;
@@ -29,16 +30,20 @@ const shift = (v, k, d) => {
   return v;
 };
 
-const KEY_LABELS = {text: 'النص', at: 'الوقت', note: 'تعليق', noteAt: 'وقت التعليق', title: 'العنوان', label: 'العنوان', labelAt: 'وقت العنوان', sub: 'سطر تحتي', subAt: 'وقت السطر', items: 'العناصر', hot: 'ملوّن', before: 'قبل', after: 'بعد', tag: 'البطاقة', steps: 'الخطوات', n: 'الرقم'};
-const TYPE_LABELS = {list: 'قائمة', numbers: 'أرقام', flow: 'تحويل', word: 'عبارة', custom: 'رسمة خاصة'};
-const sceneTitle = (sc) => (sc.type === 'custom' ? sc.name : TYPE_LABELS[sc.type]) + (sc.title || sc.text || sc.label ? ' · ' + (sc.title || sc.text || sc.label) : '');
+const KEY_LABELS = {text: 'النص', at: 'الوقت', note: 'تعليق', noteAt: 'وقت التعليق', title: 'العنوان', label: 'العنوان', labelAt: 'وقت العنوان', sub: 'سطر تحتي', subAt: 'وقت السطر', items: 'العناصر', hot: 'ملوّن', before: 'قبل', after: 'بعد', tag: 'البطاقة', steps: 'الخطوات', n: 'الرقم', icon: 'أيقونة', art: 'رسمة موشن', amount: 'المبلغ', total: 'المجموع', totalAt: 'وقت المجموع', totalLabel: 'اسم المجموع', right: 'الجهة اليمين', left: 'الجهة اليسار', mark: 'العلامة', value: 'الرقم', unit: 'الوحدة'};
+const ART_LABELS = {shop: 'محل', building: 'عمارة', coins: 'عملات تتكدّس', coin: 'عملة', bills: 'ورق نقد', doc: 'ورقة رسمية', person: 'شخص', calendar: 'روزنامة'};
+const TYPE_LABELS = {list: 'قائمة', numbers: 'أرقام', flow: 'تحويل', word: 'عبارة', total: 'تكاليف', compare: 'مقارنة', stat: 'رقم كبير', custom: 'رسمة خاصة'};
+const sceneTitle = (sc) => (sc.type === 'custom' ? sc.name : TYPE_LABELS[sc.type]) + (sc.title || sc.text || sc.label || sc.value ? ' · ' + (sc.title || sc.text || sc.label || sc.value) : '');
 
 const newScene = (type, t) => {
   const s = r2(t);
   const base = {
     list: {type, layout: 'split', s, e: r2(s + 4.5), title: 'العنوان', items: [{text: 'النقطة الأولى', at: r2(s + 0.6)}, {text: 'النقطة الثانية', at: r2(s + 1.8)}]},
     numbers: {type, layout: 'full', s, e: r2(s + 3.5), label: '', items: [{text: '10', at: r2(s + 0.6)}, {text: '20', at: r2(s + 1.6)}]},
-    flow: {type, layout: 'split', s, e: r2(s + 4), items: [{text: 'قبل', at: r2(s + 0.6)}, {text: 'بعد', at: r2(s + 1.8)}]},
+    flow: {type, layout: 'split', s, e: r2(s + 4), items: [{text: 'قبل', art: 'person', at: r2(s + 0.6)}, {text: 'بعد', art: 'building', at: r2(s + 1.8)}]},
+    total: {type, layout: 'split', s, e: r2(s + 5), title: 'التكاليف', items: [{text: 'البند الأول', amount: '10', icon: 'money', at: r2(s + 0.6)}, {text: 'البند الثاني', amount: '20', icon: 'doc', at: r2(s + 1.6)}], total: '30', totalAt: r2(s + 2.8)},
+    compare: {type, layout: 'full', s, e: r2(s + 5), right: {title: 'الأول', art: 'person', at: r2(s + 0.6), mark: 'cross', items: [{text: 'نقطة', at: r2(s + 1.8)}]}, left: {title: 'الثاني', art: 'building', at: r2(s + 1.2), mark: 'check', items: [{text: 'نقطة', at: r2(s + 2.6)}]}},
+    stat: {type, layout: 'full', s, e: r2(s + 3.5), value: '80', unit: 'ألف', label: 'وش هالرقم', art: 'coins', at: r2(s + 0.6)},
     word: {type, layout: 'full', s, e: r2(s + 3), text: 'العبارة هنا', at: [r2(s + 0.5), r2(s + 0.9)], hot: [1]},
   };
   return base[type];
@@ -141,6 +146,30 @@ function Fields({value, onChange, skip = []}) {
     .map(([k, v]) => {
       const label = KEY_LABELS[k] || k;
       const put = (nv) => onChange({...value, [k]: nv});
+      if (k === 'icon' || k === 'art' || k === 'mark') {
+        const opts = k === 'icon' ? Object.keys(ICONS).map((x) => [x, x]) : k === 'art' ? Object.entries(ART_LABELS) : [['check', 'صح'], ['cross', 'خطأ']];
+        return (
+          <Row key={k} label={label}>
+            <select value={v || ''} onChange={(e) => put(e.target.value)}>
+              {k !== 'mark' ? <option value="">بدون</option> : null}
+              {opts.map(([val, lab]) => (
+                <option key={val} value={val}>
+                  {lab}
+                </option>
+              ))}
+            </select>
+          </Row>
+        );
+      }
+      if (v && typeof v === 'object' && !Array.isArray(v))
+        return (
+          <div className="group" key={k}>
+            <h4>{label}</h4>
+            <div className="card">
+              <Fields value={v} onChange={put} />
+            </div>
+          </div>
+        );
       if (typeof v === 'string')
         return (
           <Row key={k} label={label}>
@@ -1015,7 +1044,7 @@ function Editor({project}) {
           <span className="status" style={{minWidth: 0}}>
             أضف رسمة عند المؤشر:
           </span>
-          {['list', 'numbers', 'flow', 'word'].map((k) => (
+          {['list', 'total', 'compare', 'flow', 'stat', 'numbers', 'word'].map((k) => (
             <button key={k} onClick={() => addScene(k)}>
               ＋ {TYPE_LABELS[k]}
             </button>

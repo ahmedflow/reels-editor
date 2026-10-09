@@ -55,8 +55,11 @@ function sceneSounds(sc) {
   if (Array.isArray(sc.sfx)) return sc.sfx.filter((x) => x && SFX[x.name] && Number.isFinite(x.at));
   // التلقائي: نفخة عند دخول الرسمة، وصوت خفيف مع كل عنصر له وقت
   const out = [{at: sc.s, name: 'whoosh'}];
-  const each = sc.type === 'numbers' ? 'tick' : 'pop';
+  const each = sc.type === 'numbers' || sc.type === 'total' ? 'tick' : 'pop';
   for (const it of sc.items || []) if (Number.isFinite(it?.at)) out.push({at: it.at, name: each});
+  if (sc.type === 'total' && sc.total != null && Number.isFinite(sc.totalAt)) out.push({at: sc.totalAt, name: 'pop'});
+  if (sc.type === 'stat') out.push({at: sc.at ?? sc.s + 0.5, name: 'pop'});
+  if (sc.type === 'compare') for (const sd of [sc.right, sc.left]) if (Number.isFinite(sd?.at)) out.push({at: sd.at, name: 'pop'});
   if (sc.type === 'word') for (const at of sc.at || []) if (Number.isFinite(at)) out.push({at, name: 'pop'});
   return out;
 }
@@ -100,7 +103,7 @@ export function validatePlan(plan, total) {
   for (const sc of scenes) {
     const len = sc.e - sc.s;
     const split = layoutOf(sc) === 'split';
-    if (!['flow', 'numbers', 'list', 'word', 'custom'].includes(sc.type)) problems.push(`الرسمة ${sc.n}: نوع مو معروف "${sc.type}"`);
+    if (!['flow', 'numbers', 'list', 'word', 'total', 'compare', 'stat', 'custom'].includes(sc.type)) problems.push(`الرسمة ${sc.n}: نوع مو معروف "${sc.type}"`);
     if (sc.type === 'custom' && !sc.name) problems.push(`الرسمة ${sc.n}: نوعها custom وناقصها name`);
     if (sc.layout && !['full', 'split'].includes(sc.layout)) problems.push(`الرسمة ${sc.n}: layout يا full يا split`);
     if (!(sc.e > sc.s)) problems.push(`الرسمة ${sc.n}: النهاية لازم تكون بعد البداية`);

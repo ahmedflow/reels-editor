@@ -23,34 +23,58 @@ Remotion يرسم بالكود، وهذي ميزتك: ما أنت محصور ب�
 
 جرّب أكثر من تصوّر بذهنك وامسك اللي يوصل أسرع. المشاهد عنده ثانية يفهم فيها.
 
+## موشن جرافيك، مو بطاقات
+
+اللي يفرق الموشن جرافيك عن شريحة عرض إن **الأشياء نفسها مرسومة وتتحرك**. كلمة «محل» داخل مربع شريحة. محل بمظلته يطلع من الأرض ثم تنزل جنبه عملات تتكدّس، هذا موشن.
+
+فكل رسمة تكتبها تمر على هالأربع:
+
+1. **فيها شي مرسوم، مو نص بس.** خذ من الرسومات الجاهزة (`Art`)، أو ارسم أنت بـSVG إذا اللي تبغاه مو موجود. النص يسمّي الرسمة ويكمّلها، ما يقوم مقامها.
+2. **تنبني على مراحل.** الجدار، ثم المظلة، ثم اللوحة. العملة الأولى، ثم الثانية. اللي ينبني قدام العين يشدّها، واللي يطلع كامل دفعة وحدة يمر.
+3. **كل مرحلة مربوطة بكلمة.** المحل يطلع لما يقول «محل»، والعملات تنزل لما يقول المبلغ.
+4. **ما تتجمّد بعد ما تكتمل.** طفو خفيف (`float`) على النجم يخليها حيّة لين تروح. خفيف يعني بكسلات، مو رقص.
+
 ## وين تكتب
 
-ملف اسمه `custom.jsx` بمجلد الشغل. شكله:
+ملف اسمه `custom.jsx` بمجلد الشغل. هذا مثال كامل لجملة «تفتح محل يكلفك 80 ألف»:
 
 ```jsx
 import React from 'react';
-import {clamp, lerp, ease, easeInOut, prog, enter, rgba, Box} from './kit.jsx';
+import {prog, pop, float, drop, count, Art} from './kit.jsx';
 
-const Drop = ({t, scene, th}) => {
-  const k = prog(t, scene.dropAt, 0.6);
+// المحل ينبني، العملات تنزل جنبه وتتكدّس، والرقم يعدّ لين يوصل
+const OpenShop = ({t, scene, th, H}) => {
+  const u = H / 600; // مرسومة على مقاس القسمة، وتكبر لو صارت مالية الشاشة
   return (
-    <div style={{position: 'absolute', inset: 0, display: 'flex', alignItems: 'flex-end', justifyContent: 'center', gap: 80, paddingBottom: 120}}>
-      <div style={{width: 220, height: 600, borderRadius: 24, background: rgba(th.ink, 0.2), ...enter(t, scene.s + 0.3)}} />
-      <div style={{width: 220, height: lerp(600, 300, k), borderRadius: 24, background: th.acc, ...enter(t, scene.s + 0.4)}} />
+    <div style={{position: 'absolute', inset: 0, display: 'flex', direction: 'rtl', alignItems: 'center', justifyContent: 'center', gap: 50 * u}}>
+      <div style={{transform: `translateY(${float(t, 5)}px)`}}>
+        <Art name="shop" size={340 * u} th={th} k={prog(t, scene.shopAt, 1)} />
+      </div>
+      <div style={{display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 * u}}>
+        <div style={{transform: `translateY(${drop(t, scene.costAt, 150 * u)}px)`, opacity: prog(t, scene.costAt, 0.15)}}>
+          <Art name="coins" size={210 * u} th={th} k={prog(t, scene.costAt, 1.1)} />
+        </div>
+        <div style={{display: 'flex', direction: 'rtl', alignItems: 'baseline', gap: 16 * u, ...pop(t, scene.costAt + 0.2)}}>
+          <span style={{fontSize: 150 * u, fontWeight: 800, lineHeight: 1, color: th.acc, direction: 'ltr', fontVariantNumeric: 'tabular-nums'}}>{count(t, scene.costAt + 0.2, scene.cost, 0.8)}</span>
+          <span style={{fontSize: 60 * u, fontWeight: 700, color: th.ink}}>{scene.unit}</span>
+        </div>
+      </div>
     </div>
   );
 };
 
-export const scenes = {drop: Drop};
+export const scenes = {openShop: OpenShop};
 ```
 
 وتستدعيها من `plan.json`:
 
 ```json
-{"type": "custom", "name": "drop", "layout": "split", "s": 12.0, "e": 15.5, "dropAt": 13.2}
+{"type": "custom", "name": "openShop", "layout": "split", "s": 12.0, "e": 16.0,
+ "shopAt": 12.4, "costAt": 13.6, "cost": 80, "unit": "ألف",
+ "sfx": [{"at": 12.0, "name": "whoosh"}, {"at": 13.6, "name": "pop"}]}
 ```
 
-`name` لازم يساوي المفتاح اللي بـ`scenes`. وأي حقل زيادة تكتبه هنا (زي `dropAt`) يوصل الرسمة داخل `scene`. خلّ الأوقات والنصوص بهالملف والكود للحركة فقط، فإذا تغيّر وقت كلمة تعدّل رقم وما تفتح الكود.
+`name` لازم يساوي المفتاح اللي بـ`scenes`. وأي حقل زيادة تكتبه هنا (زي `shopAt`) يوصل الرسمة داخل `scene`. خلّ الأوقات والنصوص والأرقام بهالملف والكود للحركة فقط، فإذا تغيّر وقت كلمة تعدّل رقم وما تفتح الكود، والمستخدم يقدر يعدّلها من المحرّر.
 
 سطر الاستيراد من `./kit.jsx` لا تغيّر مساره: وقت التصدير الملف ينتقل لجوّا المحرّك وهناك يلقى `kit.jsx` جنبه.
 
@@ -67,13 +91,51 @@ export const scenes = {drop: Drop};
 
 ## أدوات `kit.jsx`
 
+**الحركة:**
+
 - `prog(t, at, dur)`: رقم يمشي من 0 لـ1 ابتداءً من `at` وعلى مدى `dur`. كل حركة عندك تنبني عليه.
-- `enter(t, at)`: ظهور جاهز تفرده على أي عنصر.
-- `lerp(a, b, k)`: نقطة بين قيمتين.
-- `ease` و`easeInOut`: يليّنون الحركة.
-- `clamp(v, a, b)`: يمسك القيمة داخل مدى.
+- `pop(t, at)`: ظهور بنبضة، يكبر ويتعدّى حجمه شعرة ثم يستقر. للنجم.
+- `enter(t, at)`: ظهور ناعم. للعناصر الثانوية.
+- `slide(t, at, dx)`: دخول من الجنب. `dx` موجب من اليمين.
+- `drop(t, at, h)`: نزلة من فوق بارتداد خفيف. يرجّع بكسلات تحطها بـ`translateY`.
+- `float(t, amp)`: طفو هادي مستمر. يرجّع بكسلات لـ`translateY`. خلّ `amp` بين 4 و8.
+- `count(t, at, to, dur)`: رقم صحيح يعدّ من صفر لـ`to`.
+- `part(k, a, b)`: يقسم حركة وحدة على مراحل. `part(k, 0.3, 0.7)` يمشي من 0 لـ1 والـ`k` بين 0.3 و0.7.
+- `lerp` و`clamp` و`ease` و`easeInOut` و`backOut`: للحساب.
+
+**الرسم:**
+
+- `Art`: رسمة موشن ملوّنة تنبني مع `k`. `<Art name="shop" size={300} th={th} k={prog(t, at, 1)} />`. الأسماء: `shop` `building` `coins` `coin` `bills` `doc` `person` `calendar`.
+- `Icon`: أيقونة خطّية ترسم نفسها مع `draw`. `<Icon name="key" size={120} color={th.acc} draw={prog(t, at, 0.5)} />`. الأسماء بـ`templates.md`.
+- `Card`: بطاقة لها عمق وظل، و`hot` يلوّنها.
 - `rgba(hex, alpha)`: لون من الباقة بشفافية.
-- `Box`: مربع بستايل الباقة.
+
+## إذا الرسمة اللي تبغاها مو موجودة
+
+ارسمها أنت بـSVG داخل `custom.jsx`. اللي يخليها تطلع بنفس مستوى الجاهزة:
+
+- لوحة `viewBox="0 0 200 200"` والأرض عند 180.
+- أشكال مسطّحة بسيطة: مستطيلات بزوايا مدوّرة، دواير، مسارات قليلة النقاط. الشكل ينعرف من هيئته العامة، مو من تفاصيله.
+- ثلاث ألوان بالكثير: `th.ink` للجسم، `th.acc` للجزء اللي عليه العين، `th.bg` أو `th.soft` للتفاصيل.
+- ظل بيضاوي خفيف تحتها يثبّتها على الأرض.
+- قسّمها أجزاء وكل جزء له مرحلته بـ`part(k, …)`: الجسم يطلع من الأرض (`scale` عمودي من القاعدة)، الجزء اللي فوقه ينزل عليه، والتفصيل الأخير ينبض.
+
+مثال، سيارة توصيل تدخل من اليمين وتوقف:
+
+```jsx
+const Van = ({th, k}) => (
+  <svg width={320} height={320} viewBox="0 0 200 200" style={{overflow: 'visible', transform: `translateX(${(1 - k) * 260}px)`}}>
+    <ellipse cx={100} cy={166} rx={80} ry={6} fill="rgba(0,0,0,0.25)" />
+    <rect x={24} y={76} width={104} height={74} rx={8} fill={th.ink} />
+    <path d="M128 96h30l20 24v30h-50z" fill={th.acc} />
+    <rect x={136} y={104} width={22} height={18} rx={3} fill={th.bg} />
+    <circle cx={58} cy={152} r={15} fill={th.bg} stroke={th.soft} strokeWidth={6} />
+    <circle cx={148} cy={152} r={15} fill={th.bg} stroke={th.soft} strokeWidth={6} />
+  </svg>
+);
+```
+
+وتستخدمها `<Van th={th} k={prog(t, scene.vanAt, 0.7)} />`.
 
 ## ليش الحركة لازم تنحسب من `t`
 
@@ -85,7 +147,7 @@ Remotion يصوّر كل إطار مستقل عن اللي قبله، وممكن
 
 **الحركة تمشي مع الصوت.** الشي يتحرك لحظة ما تنقال كلمته، والوقت جاي من `plan.json`.
 
-**توصل وتوقف.** العنصر يدخل ويثبت بمكانه. النطّة الزايدة تشتت. إذا فيه اهتزاز فلأن له معنى (شي معلّق، شي ثقيل نزل) ويخمد بسرعة.
+**توصل وتوقف.** العنصر يدخل ويثبت بمكانه. النطّة الزايدة تشتت. إذا فيه اهتزاز فلأن له معنى (شي معلّق، شي ثقيل نزل) ويخمد بسرعة. والطفو الخفيف بعد الوصول غير: هذا نفَس، مو حركة ثانية.
 
 **العربي ينكتب متصل.** الكلمة العربية وحدة وحدة، فتتحرك كلها مع بعض. تقطيعها حروف يفصل الحروف عن بعضها ويخرّب شكلها.
 
@@ -93,7 +155,7 @@ Remotion يصوّر كل إطار مستقل عن اللي قبله، وممكن
 
 **الحجم لشاشة جوال.** العنصر الرئيسي من 76 وفوق، وأصغر كتابة 44.
 
-**نجم واحد.** شي واحد كبير يحمل المعنى. تقدر تسنده بعنصر ثاني أصغر، والثالث زحمة.
+**نجم واحد.** شي واحد كبير مرسوم يحمل المعنى. تقدر تسنده بعنصر ثاني أصغر، والثالث زحمة. والنجم رسمة، مو كلمة.
 
 **املأ مساحتك.** بالوضع المقسوم المساحة عريضة وقصيرة، فالرسمة الصغيرة تضيع بنصها. كبّر النجم لين ياخذ أغلب الطول.
 
